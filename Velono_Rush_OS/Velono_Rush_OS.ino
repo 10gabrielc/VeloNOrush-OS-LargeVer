@@ -23,6 +23,8 @@ const uint32_t psuAmperage = 2000;
 const int numOfSensors = 96;
 const int numOfRows = 12;
 const int numOfCols = 8;
+const int numOfRowsLED = 11;
+const int numOfColsLED = 26;
 
 //storage for all voltage readings
 byte voltageReadings[numOfRows][numOfCols];
@@ -31,7 +33,8 @@ byte voltageReadings[numOfRows][numOfCols];
 byte sensorMaxOffsets[numOfRows][numOfCols];
 
 //storage for LED brightnesses
-byte ledBrightness[numOfRows][numOfCols];
+//byte ledBrightness[numOfRows][numOfCols];
+byte ledBrightness[numOfRowsLED][numOfColsLED];
 
 //loop variables
 const int loopDelay = 8;
@@ -384,21 +387,202 @@ void ConvertVoltageToBrightness()
                                                     {10,10,10,10,10,10,10,10},
                                                     {10,10,10,10,10,10,10,10}};
 
+  //clear out the array of all the brightnesses initially
+  for(int ledRow = 0; ledRow < numOfRowsLED; ledRow++)
+  {
+    for(int ledCol = 0; ledCol < numOfColsLED; ledCol++)
+    {
+      ledBrightness[ledRow][ledCol] = 0;
+    }
+  }
+  
   //iterate through each row of the stored voltages
   for(int row = 0; row < numOfRows; row++)
   {
+    //create a storage for the current column/led being targeted
+    int currentColLED = 0;
+    
     //iterate through each column of the stored voltages
     for(int col = 0; col < numOfCols; col++)
     {
-      //utilize the map function to convert voltage into brightness of LED
-      //uses sensor max and min offsets to set the possible voltage range
-      //brightness is mapped from 0 to maximum brightness
-      ledBrightness[row][col] = map(
+
+      //calculate the "brightness" that a specific sensor is generating
+      byte curBr = map(
                                         voltageReadings[row][col], 
                                         sensorMaxOffsets[row][col], 
                                         sensorMinOffsets[row][col], 
                                         0, globalVal
                                       );
+
+      //store pre-converted forms of the brightness to be assigned to LEDs
+      byte curBr2 = curBr/2;
+      byte curBr4 = curBr/4;
+      
+      //START WITH TOP EDGE OF THE SENSOR MATRIX
+      if(row == 0)
+      {
+        //we can only assign values to LEDs below this row, as there are no
+        //leds above these sensors
+
+        //START WITH CHECKING FOR THE LEFT EDGE OF THE MATRIX
+        if(col == 0)
+        {
+          ledBrightness[row][currentColLED] += curBr2;
+          ledBrightness[row][currentColLED+1] += curBr2;
+          ledBrightness[row][currentColLED+2] += curBr4;
+          ledBrightness[row][currentColLED+3] += curBr4;
+          
+          currentColLED+=3;
+        }
+        else if(col == numOfCols-1) //CHECK FOR THE RIGHT EDGE OF THE MATRIX
+        {
+          ledBrightness[row][currentColLED] += curBr4;
+          ledBrightness[row][currentColLED+1] += curBr4;
+          ledBrightness[row][currentColLED+2] += curBr2;
+          ledBrightness[row][currentColLED+3] += curBr2;
+          
+          currentColLED+=3;
+        }
+        else  //ALL OTHER COLUMNS INBETWEEN
+        {
+          if(col == 2 || col == 5)
+          {
+            ledBrightness[row][currentColLED-1] += curBr4;    
+            ledBrightness[row][currentColLED] += curBr4;
+            ledBrightness[row][currentColLED+1] += curBr2;
+            ledBrightness[row][currentColLED+2] += curBr2;
+            ledBrightness[row][currentColLED+3] += curBr4;
+            ledBrightness[row][currentColLED+4] += curBr4;
+            
+            currentColLED+=4;
+          }
+          else
+          {
+            ledBrightness[row][currentColLED-1] += curBr4;
+            ledBrightness[row][currentColLED] += curBr4;
+            ledBrightness[row][currentColLED+1] += curBr2;
+            ledBrightness[row][currentColLED+2] += curBr4;
+            ledBrightness[row][currentColLED+3] += curBr4;
+            
+            currentColLED+=3;
+          }
+        }
+        
+      }
+      else if(row == (numOfRows-1)) //CHECK IF AT THE BOTTOM EDGE OF THE SENSOR MATRIX
+      {
+        //need to also check if we are in the first or last column
+        if(col == 0)
+        {
+          ledBrightness[row-1][currentColLED] += curBr2;
+          ledBrightness[row-1][currentColLED+1] += curBr2;
+          ledBrightness[row-1][currentColLED+2] += curBr4;
+          ledBrightness[row-1][currentColLED+3] += curBr4;
+          
+          currentColLED+=3;
+        }
+        else if(col == numOfCols-1)
+        {
+          ledBrightness[row-1][currentColLED] += curBr4;
+          ledBrightness[row-1][currentColLED+1] += curBr4;
+          ledBrightness[row-1][currentColLED+2] += curBr2;
+          ledBrightness[row-1][currentColLED+3] += curBr2;
+          
+          currentColLED+=3;
+        }
+        else
+        {
+          if(col == 2 || col == 5)
+          {
+            ledBrightness[row-1][currentColLED-1] += curBr4;    
+            ledBrightness[row-1][currentColLED] += curBr4;
+            ledBrightness[row-1][currentColLED+1] += curBr2;
+            ledBrightness[row-1][currentColLED+2] += curBr2;
+            ledBrightness[row-1][currentColLED+3] += curBr4;
+            ledBrightness[row-1][currentColLED+4] += curBr4;
+            
+            currentColLED+=4;
+          }
+          else
+          {
+            ledBrightness[row-1][currentColLED-1] += curBr4;
+            ledBrightness[row-1][currentColLED] += curBr4;
+            ledBrightness[row-1][currentColLED+1] += curBr2;
+            ledBrightness[row-1][currentColLED+2] += curBr4;
+            ledBrightness[row-1][currentColLED+3] += curBr4;
+            
+            currentColLED+=3;
+          }
+        }
+      }
+      else  //HANDLE ALL THE ROWS INBETWEEN
+      {
+        //need to also check if we are in the first or last column
+        if(col == 0)
+        {
+          ledBrightness[row-1][currentColLED] += curBr2;
+          ledBrightness[row-1][currentColLED+1] += curBr2;
+          ledBrightness[row-1][currentColLED+2] += curBr4;
+          ledBrightness[row-1][currentColLED+3] += curBr4;
+          
+          ledBrightness[row][currentColLED] += curBr2;
+          ledBrightness[row][currentColLED+1] += curBr2;
+          ledBrightness[row][currentColLED+2] += curBr4;
+          ledBrightness[row][currentColLED+3] += curBr4;
+          
+          currentColLED+=3;
+        }
+        else if(col == numOfCols-1)
+        {
+          ledBrightness[row-1][currentColLED] += curBr4;
+          ledBrightness[row-1][currentColLED+1] += curBr4;
+          ledBrightness[row-1][currentColLED+2] += curBr2;
+          ledBrightness[row-1][currentColLED+3] += curBr2;
+          
+          ledBrightness[row][currentColLED] += curBr4;
+          ledBrightness[row][currentColLED+1] += curBr4;
+          ledBrightness[row][currentColLED+2] += curBr2;
+          ledBrightness[row][currentColLED+3] += curBr2;
+          currentColLED+=3;
+        }
+        else
+        {
+          if(col == 2 || col == 5)
+          {
+            ledBrightness[row-1][currentColLED-1] += curBr4;    
+            ledBrightness[row-1][currentColLED] += curBr4;
+            ledBrightness[row-1][currentColLED+1] += curBr2;
+            ledBrightness[row-1][currentColLED+2] += curBr2;
+            ledBrightness[row-1][currentColLED+3] += curBr4;
+            ledBrightness[row-1][currentColLED+4] += curBr4;
+            
+            ledBrightness[row][currentColLED-1] += curBr4;    
+            ledBrightness[row][currentColLED] += curBr4;
+            ledBrightness[row][currentColLED+1] += curBr2;
+            ledBrightness[row][currentColLED+2] += curBr2;
+            ledBrightness[row][currentColLED+3] += curBr4;
+            ledBrightness[row][currentColLED+4] += curBr4;
+            
+            currentColLED+=4;
+          }
+          else
+          {
+            ledBrightness[row-1][currentColLED-1] += curBr4;
+            ledBrightness[row-1][currentColLED] += curBr4;
+            ledBrightness[row-1][currentColLED+1] += curBr2;
+            ledBrightness[row-1][currentColLED+2] += curBr4;
+            ledBrightness[row-1][currentColLED+3] += curBr4;
+            
+            ledBrightness[row][currentColLED-1] += curBr4;
+            ledBrightness[row][currentColLED] += curBr4;
+            ledBrightness[row][currentColLED+1] += curBr2;
+            ledBrightness[row][currentColLED+2] += curBr4;
+            ledBrightness[row][currentColLED+3] += curBr4;
+            
+            currentColLED+=3;
+          }
+        }
+      }
     }
   }
 }
@@ -412,7 +596,7 @@ void SetBrightnesses()
   bool isOddRow = false;
   
   //iterate through each LED and illuminate it based off brightness
-  for(int row = 0; row < numOfRows; row++)
+  for(int row = 0; row < numOfRowsLED; row++)
   {
     if(row % 2 == 1)
       isOddRow = true;
@@ -420,28 +604,20 @@ void SetBrightnesses()
       isOddRow = false;
 
     
-    for(int col = 0; col < numOfCols; col++)
+    for(int col = 0; col < numOfColsLED; col++)
     {
       if(isOddRow == true)
       {
         //need to reverse the lighting order, and offset by 2
         //each row has 26 LEDs, of which 3 are lit per sensor
 
-        int ledPosition = ((((row*26)+25)-(col*3)));
-        
-        for(int i = 0; i < 3; i++)
-        {
-          matrixLEDs[ledPosition-i] = CHSV(globalHue, globalSat, ledBrightness[row][col]);
-        }
+        int ledPosition = ((((row*26)+25)-col));
+        matrixLEDs[ledPosition] = CHSV(globalHue, globalSat, ledBrightness[row][col]);
       }
       else
       {
-        int ledPosition = ((row*26)+(col*3));
-
-        for(int i = 0; i < 3; i++)
-        {
-          matrixLEDs[ledPosition+i] = CHSV(globalHue, globalSat, ledBrightness[row][col]);
-        }
+        int ledPosition = ((row*26)+col);
+        matrixLEDs[ledPosition] = CHSV(globalHue, globalSat, ledBrightness[row][col]);
       }
     }
   }
