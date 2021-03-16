@@ -20,7 +20,7 @@ const int numOfCols = 8;
 const int numOfRowsLED = 11;
 const int numOfColsLED = 26;
 
-//storage for LED brightnesses
+//storage for LED brightness
 byte ledBrightness[numOfRowsLED][numOfColsLED];
 
 //loop variables
@@ -163,7 +163,6 @@ void ConvertVoltageToBrightness()
     //iterate through each column of the stored voltages
     for(int col = 0; col < numOfCols; col++)
     {
-
       byte currentSensorVal = CoreFunctions.GetSensorVal(row, col);
       byte currentMax = CoreFunctions.GetMax(row, col);
       byte currentMin = CoreFunctions.GetMin(row, col);
@@ -358,7 +357,7 @@ void SetBrightnesses()
   bool isOddRow = false;
   
   //iterate through each LED and illuminate it based off brightness
-  for(int row = 0; row < numOfRows; row++)
+  for(int row = 0; row < numOfRowsLED; row++)
   {
     if(row % 2 == 1)
       isOddRow = true;
@@ -366,28 +365,20 @@ void SetBrightnesses()
       isOddRow = false;
 
     
-    for(int col = 0; col < numOfCols; col++)
+    for(int col = 0; col < numOfColsLED; col++)
     {
       if(isOddRow == true)
       {
         //need to reverse the lighting order, and offset by 2
         //each row has 26 LEDs, of which 3 are lit per sensor
 
-        int ledPosition = ((((row*26)+25)-(col*3)));
-        
-        for(int i = 0; i < 3; i++)
-        {
-          matrixLEDs[ledPosition-i] = CHSV(globalHue, globalSat, ledBrightness[row][col]);
-        }
+        int ledPosition = ((((row*26)+25)-col));
+        matrixLEDs[ledPosition] = CHSV(globalHue, globalSat, ledBrightness[row][col]);
       }
       else
       {
-        int ledPosition = ((row*26)+(col*3));
-
-        for(int i = 0; i < 3; i++)
-        {
-          matrixLEDs[ledPosition+i] = CHSV(globalHue, globalSat, ledBrightness[row][col]);
-        }
+        int ledPosition = ((row*26)+col);
+        matrixLEDs[ledPosition] = CHSV(globalHue, globalSat, ledBrightness[row][col]);
       }
     }
   }
