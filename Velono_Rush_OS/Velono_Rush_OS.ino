@@ -1,7 +1,7 @@
 #include "VeloNOrush_Functions.h"
 
 //Select the pins that will count for the A,B,C, and D
-const byte muxPinA = 7;    
+const byte muxPinA = 7;
 const byte muxPinB = 8;
 const byte muxPinC = 9;
 const byte muxPinD = 10;
@@ -21,7 +21,7 @@ const int numOfRowsLED = 11;
 const int numOfColsLED = 26;
 
 //storage for LED brightness
-byte ledBrightness[numOfRowsLED][numOfColsLED];
+//byte ledBrightness[numOfRowsLED][numOfColsLED];
 
 //loop variables
 const int loopDelay = 8;
@@ -45,22 +45,7 @@ byte globalVal = 255;
 //constants throughout the code
 const int adcDelay = 100;                       //Delay for ADC cooldown in microseconds
 
-//change these to bytes
-struct location{
-  byte row;
-  byte col;
-};
-
 VeloNOrushCore CoreFunctions(muxPinA,muxPinB,muxPinC,muxPinD);
-
-//global memory usage:
-// 3 arrays of 96 bytes: 288
-// 286 LEDs, each LED with 24 bits: 858
-// total: 1146
-
-/*
- * ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
- */
 
 /*
  * FUNCTION TO TEST EACH LED CONNECTED TO THE SYSTEM
@@ -70,9 +55,10 @@ VeloNOrushCore CoreFunctions(muxPinA,muxPinB,muxPinC,muxPinD);
 void TestLEDs()
 {
   //iterate through all LEDs in the matrix
+  
   for (int i = 0; i < NUM_LEDS; i++)
   {
-    matrixLEDs[i] = CHSV(globalHue, globalSat, globalVal);      //set to global hue, staturation and value
+    matrixLEDs[i] = CHSV(globalHue, globalSat, globalVal/2);      //set to global hue, staturation and value
     FastLED.show();                                             //update each loop
     delay(10);                                                  //10ms delay between each light
   }
@@ -111,11 +97,11 @@ void setup()
     recalibrateTries+=1;
     if(digitalRead(recalibratePin) == LOW)
     {
-        fill_solid(matrixLEDs, NUM_LEDS, CHSV(0, 255, MAX_BRIGHTNESS/8));
+        fill_solid(matrixLEDs, NUM_LEDS, CHSV(0, 255, MAX_BRIGHTNESS/2));
         FastLED.show();
         CoreFunctions.CalibrateMaxes();
         CoreFunctions.CalibrateMins();
-        fill_solid(matrixLEDs, NUM_LEDS, CHSV(120, 255, MAX_BRIGHTNESS/8));
+        fill_solid(matrixLEDs, NUM_LEDS, CHSV(120, 255, MAX_BRIGHTNESS/2));
         FastLED.show();
         delay(1000);
         FastLED.clear();
@@ -131,18 +117,59 @@ void loop()
 {
   CoreFunctions.ReadSensors();
   
-  ConvertVoltageToBrightness();
+  CoreFunctions.MapSensorsToBrightness(globalVal);
 
   //Lastly, we set the LED brightnesses
   SetBrightnesses();
+
+  globalHue+=5;
 
   delay(loopDelay);
 }
 
 /*
+ * FUNCTION THAT ASSIGNS THE CONVERTED BRIGHTNESS TO THE LED MATRIX
+ */
+void SetBrightnesses()
+{
+  int ledPosition = 0;
+  bool isOddRow = false;
+  
+  //iterate through each LED and illuminate it based off brightness
+  for(int row = 0; row < numOfRowsLED; row++)
+  {
+    if(row % 2 == 1)
+      isOddRow = true;
+    else
+      isOddRow = false;
+
+    
+    for(int col = 0; col < numOfColsLED; col++)
+    {
+      byte brightness = CoreFunctions.GetBrightness(row, col);
+      if(isOddRow == true)
+      {
+        int ledPosition = ((((row*26)+25)-col));
+        matrixLEDs[ledPosition] = CHSV(globalHue, globalSat, brightness);
+      }
+      else
+      {
+        int ledPosition = ((row*26)+col);
+        matrixLEDs[ledPosition] = CHSV(globalHue, globalSat, brightness);
+      }
+    }
+  }
+  FastLED.show();
+}
+
+//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~TRASH BELOW HERE~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+/*
+
+
  * FUNCTION THAT TAKES THE STORED VOLTAGES AND CONVERTS THEM INTO
  * A BRIGHTNESS BETWEEN 0 AND THE MAX BRIGHTNESS
- */
+ *
 void ConvertVoltageToBrightness()
 {
   //clear out the array of all the brightnesses initially
@@ -200,7 +227,7 @@ void ConvertVoltageToBrightness()
           ledBrightness[row][currentColLED] += curBr4;
           ledBrightness[row][currentColLED+1] += curBr4;
           ledBrightness[row][currentColLED+2] += curBr2;
-          ledBrightness[row][currentColLED+3] += curBr2;
+          //ledBrightness[row][currentColLED+3] += curBr2;
           
           currentColLED+=3;
         }
@@ -247,7 +274,7 @@ void ConvertVoltageToBrightness()
           ledBrightness[row-1][currentColLED] += curBr4;
           ledBrightness[row-1][currentColLED+1] += curBr4;
           ledBrightness[row-1][currentColLED+2] += curBr2;
-          ledBrightness[row-1][currentColLED+3] += curBr2;
+          //ledBrightness[row-1][currentColLED+3] += curBr2;
           
           currentColLED+=3;
         }
@@ -298,12 +325,12 @@ void ConvertVoltageToBrightness()
           ledBrightness[row-1][currentColLED] += curBr4;
           ledBrightness[row-1][currentColLED+1] += curBr4;
           ledBrightness[row-1][currentColLED+2] += curBr2;
-          ledBrightness[row-1][currentColLED+3] += curBr2;
+          //ledBrightness[row-1][currentColLED+3] += curBr2;
           
           ledBrightness[row][currentColLED] += curBr4;
           ledBrightness[row][currentColLED+1] += curBr4;
           ledBrightness[row][currentColLED+2] += curBr2;
-          ledBrightness[row][currentColLED+3] += curBr2;
+          //ledBrightness[row][currentColLED+3] += curBr2;
           currentColLED+=3;
         }
         else
@@ -348,46 +375,7 @@ void ConvertVoltageToBrightness()
   }
 }
 
-/*
- * FUNCTION THAT ASSIGNS THE CONVERTED BRIGHTNESS TO THE LED MATRIX
- */
-void SetBrightnesses()
-{
-  int ledPosition = 0;
-  bool isOddRow = false;
-  
-  //iterate through each LED and illuminate it based off brightness
-  for(int row = 0; row < numOfRowsLED; row++)
-  {
-    if(row % 2 == 1)
-      isOddRow = true;
-    else
-      isOddRow = false;
-
-    
-    for(int col = 0; col < numOfColsLED; col++)
-    {
-      if(isOddRow == true)
-      {
-        //need to reverse the lighting order, and offset by 2
-        //each row has 26 LEDs, of which 3 are lit per sensor
-
-        int ledPosition = ((((row*26)+25)-col));
-        matrixLEDs[ledPosition] = CHSV(globalHue, globalSat, ledBrightness[row][col]);
-      }
-      else
-      {
-        int ledPosition = ((row*26)+col);
-        matrixLEDs[ledPosition] = CHSV(globalHue, globalSat, ledBrightness[row][col]);
-      }
-    }
-  }
-  FastLED.show();
-}
-
-//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~TRASH BELOW HERE~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-
-/*void CalibrateSensors()
+void CalibrateSensors()
 {
     //storage for pin vals
     bool pinAval, pinBval, pinCval, pinDval = 0;

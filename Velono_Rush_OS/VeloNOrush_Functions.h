@@ -3,6 +3,8 @@
 
 #define SENSOR_ROWS 12
 #define SENSOR_COLS 8
+#define LED_ROWS 11
+#define LED_COLS 26
 #define CALIBRATE_TIME 7
 #define CALIBRATE_SAMPLES 20
 
@@ -16,6 +18,8 @@ class VeloNOrushCore:public CalibrationCore
     void ReadSensor(int row, int col);
     void ReadSensors();
     byte GetSensorVal(int row, int col);
+    void MapSensorsToBrightness(byte maxVal);
+    byte GetBrightness(int row, int col);
     bool CalibrateMins();
     bool CalibrateMaxes();
   private:
@@ -23,6 +27,7 @@ class VeloNOrushCore:public CalibrationCore
     void RowCol2Pins(int row, int col);
     //void GetNextRowCol();
     byte voltageReadings[SENSOR_ROWS][SENSOR_COLS];
+    byte ledBrightness[LED_ROWS][LED_COLS];
     byte analogPin;
     byte muxPin;
     byte pinA;

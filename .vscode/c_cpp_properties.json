@@ -3,19 +3,27 @@
         {
             "name": "Win32",
             "includePath": [
+                "C:\\Users\\10gab\\AppData\\Local\\Arduino15\\packages\\arduino\\tools\\**",
+                "C:\\Users\\10gab\\Documents\\Arduino\\libraries\\**",
+                "C:\\Program Files (x86)\\Arduino\\libraries\\**",
+                "C:\\Users\\10gab\\AppData\\Local\\Arduino15\\packages\\arduino\\hardware\\avr\\1.8.3\\**",
                 "${workspaceFolder}/**",
                 "C:\\Users\\10gab\\Documents\\Arduino\\libraries**"
             ],
             "defines": [
                 "_DEBUG",
                 "UNICODE",
-                "_UNICODE"
+                "_UNICODE",
+                "USBCON"
             ],
             "windowsSdkVersion": "10.0.18362.0",
             "compilerPath": "C:/Program Files (x86)/Microsoft Visual Studio/2019/Community/VC/Tools/MSVC/14.25.28610/bin/Hostx64/x64/cl.exe",
             "cStandard": "c17",
             "cppStandard": "c++17",
-            "intelliSenseMode": "windows-msvc-x64"
+            "intelliSenseMode": "windows-msvc-x64",
+            "forcedInclude": [
+                "C:\\Users\\10gab\\AppData\\Local\\Arduino15\\packages\\arduino\\hardware\\avr\\1.8.3\\cores\\arduino\\Arduino.h"
+            ]
         }
     ],
     "version": 4

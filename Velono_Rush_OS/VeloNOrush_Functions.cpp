@@ -1,6 +1,5 @@
 #include "VeloNOrush_Functions.h"
 
-
 /**
  * ~~~~~~~~~~~~~~PUBLIC FUNCTIONS~~~~~~~~~~~~~~~~~~
  */
@@ -65,6 +64,217 @@ byte VeloNOrushCore::GetSensorVal(int row, int col)
   return voltageReadings[row][col];
 }
 
+void VeloNOrushCore::MapSensorsToBrightness(byte maxVal)
+{
+  //clear out the array of all the brightnesses initially
+  for(int ledRow = 0; ledRow < LED_ROWS; ledRow++)
+  {
+    for(int ledCol = 0; ledCol < LED_COLS; ledCol++)
+    {
+      ledBrightness[ledRow][ledCol] = 0;
+    }
+  }
+
+  //iterate through each row of the stored voltages
+  for(int row = 0; row < SENSOR_ROWS; row++)
+  {
+    //create a storage for the current column/led being targeted
+    int currentColLED = 0;
+    
+    //iterate through each column of the stored voltages
+    for(int col = 0; col < SENSOR_COLS; col++)
+    {
+      byte currentSensorVal = GetSensorVal(row, col);
+      byte currentMax = GetMax(row, col);
+      byte currentMin = GetMin(row, col);
+      
+      //calculate the current "brightness" that a specific sensor is generating
+      byte curBr = map(
+                        currentSensorVal, 
+                        currentMax, 
+                        currentMin, 
+                        0, maxVal
+                       );
+
+      //store pre-converted forms of the brightness to be assigned to LEDs
+      byte curBr2 = curBr/2;
+      byte curBr4 = curBr/4;
+      
+      //START WITH TOP EDGE OF THE SENSOR MATRIX
+      if(row == 0)
+      {
+        //we can only assign values to LEDs below this row, as there are no
+        //leds above these sensors
+
+        //START WITH CHECKING FOR THE LEFT EDGE OF THE MATRIX
+        if(col == 0)
+        {
+          ledBrightness[row][currentColLED] += curBr2;
+          ledBrightness[row][currentColLED+1] += curBr2;
+          ledBrightness[row][currentColLED+2] += curBr4;
+          ledBrightness[row][currentColLED+3] += curBr4;
+          
+          currentColLED+=3;
+        }
+        else if(col == SENSOR_COLS-1) //CHECK FOR THE RIGHT EDGE OF THE MATRIX
+        {
+          ledBrightness[row][currentColLED-1] += curBr4;
+          ledBrightness[row][currentColLED] += curBr4;
+          ledBrightness[row][currentColLED+1] += curBr2;
+          ledBrightness[row][currentColLED+2] += curBr2;
+          
+          currentColLED+=3;
+        }
+        else  //ALL OTHER COLUMNS INBETWEEN
+        {
+          if(col == 2 || col == 5)
+          {
+            ledBrightness[row][currentColLED-1] += curBr4;    
+            ledBrightness[row][currentColLED] += curBr4;
+            ledBrightness[row][currentColLED+1] += curBr2;
+            ledBrightness[row][currentColLED+2] += curBr2;
+            ledBrightness[row][currentColLED+3] += curBr4;
+            ledBrightness[row][currentColLED+4] += curBr4;
+            
+            currentColLED+=4;
+          }
+          else
+          {
+            ledBrightness[row][currentColLED-1] += curBr4;
+            ledBrightness[row][currentColLED] += curBr4;
+            ledBrightness[row][currentColLED+1] += curBr2;
+            ledBrightness[row][currentColLED+2] += curBr4;
+            ledBrightness[row][currentColLED+3] += curBr4;
+            
+            currentColLED+=3;
+          }
+        }
+        
+      }
+      else if(row == (SENSOR_ROWS-1)) //CHECK IF AT THE BOTTOM EDGE OF THE SENSOR MATRIX
+      {
+        //need to also check if we are in the first or last column
+        if(col == 0)
+        {
+          ledBrightness[row-1][currentColLED] += curBr2;
+          ledBrightness[row-1][currentColLED+1] += curBr2;
+          ledBrightness[row-1][currentColLED+2] += curBr4;
+          ledBrightness[row-1][currentColLED+3] += curBr4;
+          
+          currentColLED+=3;
+        }
+        else if(col == SENSOR_COLS-1)
+        {
+          ledBrightness[row-1][currentColLED-1] += curBr4;
+          ledBrightness[row-1][currentColLED] += curBr4;
+          ledBrightness[row-1][currentColLED+1] += curBr2;
+          ledBrightness[row-1][currentColLED+2] += curBr2;
+          
+          currentColLED+=3;
+        }
+        else
+        {
+          if(col == 2 || col == 5)
+          {
+            ledBrightness[row-1][currentColLED-1] += curBr4;    
+            ledBrightness[row-1][currentColLED] += curBr4;
+            ledBrightness[row-1][currentColLED+1] += curBr2;
+            ledBrightness[row-1][currentColLED+2] += curBr2;
+            ledBrightness[row-1][currentColLED+3] += curBr4;
+            ledBrightness[row-1][currentColLED+4] += curBr4;
+            
+            currentColLED+=4;
+          }
+          else
+          {
+            ledBrightness[row-1][currentColLED-1] += curBr4;
+            ledBrightness[row-1][currentColLED] += curBr4;
+            ledBrightness[row-1][currentColLED+1] += curBr2;
+            ledBrightness[row-1][currentColLED+2] += curBr4;
+            ledBrightness[row-1][currentColLED+3] += curBr4;
+            
+            currentColLED+=3;
+          }
+        }
+      }
+      else  //HANDLE ALL THE ROWS INBETWEEN
+      {
+        //need to also check if we are in the first or last column
+        if(col == 0)
+        {
+          ledBrightness[row-1][currentColLED] += curBr2;
+          ledBrightness[row-1][currentColLED+1] += curBr2;
+          ledBrightness[row-1][currentColLED+2] += curBr4;
+          ledBrightness[row-1][currentColLED+3] += curBr4;
+          
+          ledBrightness[row][currentColLED] += curBr2;
+          ledBrightness[row][currentColLED+1] += curBr2;
+          ledBrightness[row][currentColLED+2] += curBr4;
+          ledBrightness[row][currentColLED+3] += curBr4;
+          
+          currentColLED+=3;
+        }
+        else if(col == SENSOR_COLS-1)
+        {
+          ledBrightness[row-1][currentColLED-1] += curBr4;
+          ledBrightness[row-1][currentColLED] += curBr4;
+          ledBrightness[row-1][currentColLED+1] += curBr2;
+          ledBrightness[row-1][currentColLED+2] += curBr2;
+          
+          ledBrightness[row][currentColLED-1] += curBr4;
+          ledBrightness[row][currentColLED] += curBr4;
+          ledBrightness[row][currentColLED+1] += curBr2;
+          ledBrightness[row][currentColLED+2] += curBr2;
+          currentColLED+=3;
+        }
+        else
+        {
+          if(col == 2 || col == 5)
+          {
+            ledBrightness[row-1][currentColLED-1] += curBr4;    
+            ledBrightness[row-1][currentColLED] += curBr4;
+            ledBrightness[row-1][currentColLED+1] += curBr2;
+            ledBrightness[row-1][currentColLED+2] += curBr2;
+            ledBrightness[row-1][currentColLED+3] += curBr4;
+            ledBrightness[row-1][currentColLED+4] += curBr4;
+            
+            ledBrightness[row][currentColLED-1] += curBr4;    
+            ledBrightness[row][currentColLED] += curBr4;
+            ledBrightness[row][currentColLED+1] += curBr2;
+            ledBrightness[row][currentColLED+2] += curBr2;
+            ledBrightness[row][currentColLED+3] += curBr4;
+            ledBrightness[row][currentColLED+4] += curBr4;
+            
+            currentColLED+=4;
+          }
+          else
+          {
+            ledBrightness[row-1][currentColLED-1] += curBr4;
+            ledBrightness[row-1][currentColLED] += curBr4;
+            ledBrightness[row-1][currentColLED+1] += curBr2;
+            ledBrightness[row-1][currentColLED+2] += curBr4;
+            ledBrightness[row-1][currentColLED+3] += curBr4;
+            
+            ledBrightness[row][currentColLED-1] += curBr4;
+            ledBrightness[row][currentColLED] += curBr4;
+            ledBrightness[row][currentColLED+1] += curBr2;
+            ledBrightness[row][currentColLED+2] += curBr4;
+            ledBrightness[row][currentColLED+3] += curBr4;
+            
+            currentColLED+=3;
+          }
+        }
+      }
+    }
+  }
+}
+
+byte VeloNOrushCore::GetBrightness(int row, int col)
+{
+  byte brightness = ledBrightness[row][col];
+  return brightness;
+}
+
 bool VeloNOrushCore::CalibrateMins()
 {
   const byte tempMinVal = 10;
@@ -102,6 +312,7 @@ bool VeloNOrushCore::CalibrateMaxes()
       byte newMaxVal = ((maxSum / CALIBRATE_SAMPLES) - thresholdOffset);
 
       //call the calibration object to store the data in EEPROM
+      Serial.println(newMaxVal);
       StoreMax(newMaxVal, rowCounter, colCounter);
     }
   }
