@@ -1,3 +1,21 @@
+/*
+
+MAIN PROGRAM FOR THE VeloNOrush LARGE VERSION PROJECT
+SENIOR PROJECT UNDER DR. YIN
+CAL POLY POMONA, 2020-2021
+
+-The function of this project is pressure based detection with
+ fast and low-budget components. This project makes use of
+ material that decreases in resistance as pressure/weight is
+ applied. Using multiplexers, numerous detection zones are
+ created to collect user location and pressure/weight. The
+ main output of the system is on a matrix of individually
+ addressable LEDs (WS2812B chipset). The LEDs are programmed/driven 
+ using the publically available FastLED library.
+
+*/
+
+//Including any extra files
 #include "VeloNOrush_Functions.h"
 
 //Select the pins that will count for the A,B,C, and D
@@ -10,8 +28,8 @@ const byte muxPinD = 10;
 const byte recalibratePin = 4;
 
 //specifications of power supply used
-const byte psuVoltage = 5;
-const uint32_t psuAmperage = 2000;
+const byte psuVoltage = 5;            //supply value in volts
+const uint32_t psuAmperage = 2000;    //supply value in milliamps
 
 //constants to describe sensor matrix
 const int numOfSensors = 96;
@@ -20,13 +38,10 @@ const int numOfCols = 8;
 const int numOfRowsLED = 11;
 const int numOfColsLED = 26;
 
-//storage for LED brightness
-//byte ledBrightness[numOfRowsLED][numOfColsLED];
-
 //loop variables
-const int loopDelay = 8;
+const int loopDelay = 8;              //125hz refresh rate
 
-/*ALL FASTLED STUFF*/
+/*ALL FASTLED DEFINITIONS*/
 #include <FastLED.h>
 #define NUM_LEDS 286
 #define LED_PIN 6
@@ -45,6 +60,7 @@ byte globalVal = 255;
 //constants throughout the code
 const int adcDelay = 100;                       //Delay for ADC cooldown in microseconds
 
+//Instantiate the main core for performing system functions
 VeloNOrushCore CoreFunctions(muxPinA,muxPinB,muxPinC,muxPinD);
 
 /*

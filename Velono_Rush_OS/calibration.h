@@ -19,11 +19,5 @@ class CalibrationCore
     
   private:
     int samplingDelay;
-    //byte maxOffsets[SENSOR_ROWS][SENSOR_COLS];
-    //byte minOffsets[SENSOR_ROWS][SENSOR_COLS];
 };
 #endif
-
-/*
-  void LoadCalibrationVals();
- */

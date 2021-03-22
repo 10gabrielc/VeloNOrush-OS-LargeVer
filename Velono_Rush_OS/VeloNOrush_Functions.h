@@ -19,6 +19,7 @@ class VeloNOrushCore:public CalibrationCore
     void ReadSensors();
     byte GetSensorVal(int row, int col);
     void MapSensorsToBrightness(byte maxVal);
+    void SetBrightness(byte val, int row, int col);
     byte GetBrightness(int row, int col);
     bool CalibrateMins();
     bool CalibrateMaxes();

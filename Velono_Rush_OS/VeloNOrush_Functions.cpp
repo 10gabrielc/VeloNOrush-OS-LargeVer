@@ -269,6 +269,11 @@ void VeloNOrushCore::MapSensorsToBrightness(byte maxVal)
   }
 }
 
+void VeloNOrushCore::SetBrightness(byte val, int row, int col)
+{
+  ledBrightness[row][col] = val;
+}
+
 byte VeloNOrushCore::GetBrightness(int row, int col)
 {
   byte brightness = ledBrightness[row][col];
