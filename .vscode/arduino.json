@@ -1,7 +1,6 @@
 {
-    "board": "arduino:avr:mega",
+    "board": "arduino:avr:uno",
     "programmer": "AVR ISP",
     "sketch": "Velono_Rush_OS\\Velono_Rush_OS.ino",
-    "port": "COM3",
-    "configuration": "cpu=atmega2560"
+    "port": "COM3"
 }
