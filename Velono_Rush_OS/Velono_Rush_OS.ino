@@ -30,7 +30,7 @@ const byte recalibratePin = 4;
 
 //specifications of power supply used
 const byte psuVoltage = 5;            //supply value in volts
-const uint32_t psuAmperage = 2000;    //supply value in milliamps
+const uint32_t psuAmperage = 500;    //supply value in milliamps
 
 //constants to describe sensor matrix
 const int numOfSensors = 96;
@@ -38,6 +38,9 @@ const int numOfRows = 12;
 const int numOfCols = 8;
 const int numOfRowsLED = 11;
 const int numOfColsLED = 26;
+
+//variables used for different operation modes
+byte currentMode = 1;                 //0 is position/weight tracking, 1 is jump
 
 //loop variables
 const int loopDelay = 8;              //125hz refresh rate
@@ -63,6 +66,7 @@ const int adcDelay = 100;                       //Delay for ADC cooldown in micr
 
 //Instantiate the main core for performing system functions
 VeloNOrushCore CoreFunctions(muxPinA,muxPinB,muxPinC,muxPinD);
+JumpModeCore JumpFunctions;
 
 /*
  * FUNCTION TO TEST EACH LED CONNECTED TO THE SYSTEM
@@ -77,7 +81,7 @@ void TestLEDs()
   {
     matrixLEDs[i] = CHSV(globalHue, globalSat, globalVal/2);      //set to global hue, staturation and value
     FastLED.show();                                             //update each loop
-    delay(10);                                                  //10ms delay between each light
+    delay(5);                                                  //10ms delay between each light
   }
 
   //wait 1 second and blank the LEDs
@@ -104,8 +108,11 @@ void setup()
   //initialize serial monitor
   Serial.begin(9600);
   
+  //generate a seed for a random number generator
+  randomSeed(analogRead(A0));
+
   //test all the leds in the chain
-  TestLEDs();
+  //TestLEDs();
 
   int recalibrateTries = 0;
   bool btnDetected = false;
@@ -134,14 +141,79 @@ void loop()
 {
   CoreFunctions.ReadSensors();
   
-  CoreFunctions.MapSensorsToBrightness(globalVal);
-
-  //Lastly, we set the LED brightnesses
-  SetBrightnesses();
-
+  if(currentMode == 1)
+  {
+    JumpHandling();
+  }
+  else
+  {
+    CoreFunctions.MapSensorsToBrightness(globalVal);
+    //Lastly, we set the LED brightnesses
+    SetBrightnesses();
+  }
   globalHue+=5;
-
   delay(loopDelay);
+}
+
+void JumpHandling()
+{
+  //check all of the sensor spots for a detected jump
+  bool jumpFlag = false;
+  int rowCounter = 0;
+  int colCounter = 0;
+  byte tempSensorVal = 0;
+  byte tempMinVal = 0;
+  while(jumpFlag == false && (rowCounter < numOfRows))
+  {
+    //tempSensorVal = CoreFunctions.GetSensorVal(rowCounter, colCounter);
+    //tempMinVal = CoreFunctions.GetMin(rowCounter, colCounter);
+    //jumpFlag = JumpFunctions.JumpCheck(tempSensorVal, tempMinVal, rowCounter, colCounter);
+
+    /*TEMPORARY FORCING OF DETECTION FOR TESTING*/
+    byte randCol = (uint8_t) random(numOfCols);
+    byte randRow = (uint8_t) random(numOfRows);
+    jumpFlag = JumpFunctions.JumpCheck(10, 10, randRow, randCol);
+    Serial.print("Jumpflag: ");
+    Serial.println(jumpFlag);
+    if(colCounter == numOfCols-1)
+    {
+      rowCounter++;
+      colCounter = 0;
+    }
+    else
+    {
+      colCounter++;
+    }
+  }
+
+  if(jumpFlag == true)
+  {
+    //perform the illumination of the LEDs based off current frame
+    Serial.println("Doing the animation.");
+    while(jumpFlag == true)
+    {
+      for(int row = 0; row < numOfRowsLED; row++)
+      {
+        for(int col = 0; col < numOfColsLED; col++)
+        {
+          byte ledCode = JumpFunctions.GetPixel(row, col);
+          
+          if(ledCode == PIXEL_ON)
+            CoreFunctions.SetBrightness(globalVal, row, col);
+          else if(ledCode == PIXEL_OFF)
+            CoreFunctions.SetBrightness(0, row, col);
+          else
+          {
+            //ledCode is PIXEL_IGNORE
+          }
+        }
+      }
+      SetBrightnesses();
+      JumpFunctions.NextFrame();
+      jumpFlag = JumpFunctions.GetAnimState();
+    }
+  }
+  delay(100);
 }
 
 /*
@@ -178,5 +250,3 @@ void SetBrightnesses()
   }
   FastLED.show();
 }
-
-//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~TRASH BELOW HERE~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~

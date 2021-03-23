@@ -16,8 +16,11 @@ bool JumpModeCore::JumpCheck(byte sensorVal, byte sensorMin, int row, int col)
     {
         //jump detected
         jumpDetected = true;
-        jumpLocationRow = row;
-        jumpLocationCol = col;
+        if(row == SENSOR_ROWS-1)
+            jumpLocationRow = LED_ROWS;
+        else
+            jumpLocationRow = row;
+        jumpLocationCol = (int) col*3.25;
         currentFrame = 0;
     }
 
@@ -50,7 +53,7 @@ byte JumpModeCore::GetPixel(int row, int col)
 
     //check upwards pixel
     tempCol = jumpLocationCol;
-    tempRow = jumpLocationRow - currentFrame;
+    tempRow = jumpLocationRow - (currentFrame / 3);
     if(tempRow >= 0)
     {
         if(row == tempRow && col == tempCol)
@@ -60,7 +63,7 @@ byte JumpModeCore::GetPixel(int row, int col)
     }
 
     //check downwards pixel
-    tempRow = jumpLocationRow + currentFrame;
+    tempRow = jumpLocationRow + (currentFrame/3);
     if(tempRow < LED_ROWS)
     {
         if(row == tempRow && col == tempCol)
@@ -90,5 +93,52 @@ byte JumpModeCore::GetPixel(int row, int col)
         }
     }
 
+    //After 5 frames, start turning off lights
+    if(currentFrame >= 6)
+    {
+        //check upwards pixel
+        tempCol = jumpLocationCol;
+        tempRow = jumpLocationRow - ((currentFrame/3) - 2);
+        if(tempRow >= 0)
+        {
+            if(row == tempRow && col == tempCol)
+            {
+                lightingCode = PIXEL_OFF;
+            }
+        }
+
+        //check downwards pixel
+        tempRow = jumpLocationRow + ((currentFrame/3) - 2);
+        if(tempRow < LED_ROWS)
+        {
+            if(row == tempRow && col == tempCol)
+            {
+                lightingCode = PIXEL_OFF;
+            }
+        }
+
+        //check leftwards pixel
+        tempCol = jumpLocationCol - (currentFrame - 6);
+        tempRow = jumpLocationRow;
+        if(tempCol >= 0)
+        {
+            if(row == tempRow && col == tempCol)
+            {
+                lightingCode = PIXEL_OFF;
+            }
+        }
+
+        //check rightwards pixel
+        tempCol = jumpLocationCol + currentFrame - 6;
+        if(tempCol < LED_COLS)
+        {
+            if(row == tempRow && col == tempCol)
+            {
+                lightingCode = PIXEL_OFF;
+            }
+        }
+    }
+
+    //Return either a pixel on, off, or ignored
     return lightingCode;
 }

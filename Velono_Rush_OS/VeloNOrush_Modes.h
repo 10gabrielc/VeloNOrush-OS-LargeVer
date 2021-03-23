@@ -9,7 +9,9 @@
 #define PIXEL_ON 1
 #define PIXEL_OFF 2
 #define PIXEL_IGNORE 0
-#define MAX_FRAMES 26
+#define MAX_FRAMES 42
+
+#include "Arduino.h"
 
 class JumpModeCore
 {
@@ -25,14 +27,12 @@ class JumpModeCore
         int jumpLocationRow;
         int jumpLocationCol;
 };
-
 class DanceModeCore
 {
     public:
         DanceModeCore();
     private:
 };
-
 class LightShowCore
 {
     public:
@@ -40,5 +40,4 @@ class LightShowCore
     private:
 
 };
-
 #endif
