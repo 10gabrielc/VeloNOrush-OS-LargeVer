@@ -30,7 +30,7 @@ const byte recalibratePin = 4;
 
 //specifications of power supply used
 const byte psuVoltage = 5;            //supply value in volts
-const uint32_t psuAmperage = 500;    //supply value in milliamps
+const uint32_t psuAmperage = 2000;    //supply value in milliamps
 
 //constants to describe sensor matrix
 const int numOfSensors = 96;
@@ -40,7 +40,7 @@ const int numOfRowsLED = 11;
 const int numOfColsLED = 26;
 
 //variables used for different operation modes
-byte currentMode = 1;                 //0 is position/weight tracking, 1 is jump
+const byte currentMode = 0;                 //0 is position/weight tracking, 1 is jump
 
 //loop variables
 const int loopDelay = 8;              //125hz refresh rate
@@ -49,7 +49,7 @@ const int loopDelay = 8;              //125hz refresh rate
 #include <FastLED.h>
 #define NUM_LEDS 286
 #define LED_PIN 6
-#define MAX_BRIGHTNESS 150
+#define MAX_BRIGHTNESS 255
 #define LED_TYPE WS2812B
 #define COLOR_ORDER GRB
 
@@ -93,13 +93,13 @@ void TestLEDs()
 void setup() 
 {
   //Initialize all pins
-  pinMode(recalibratePin, INPUT_PULLUP);  //must be pressed to recalibrate maxes
+  pinMode(recalibratePin, INPUT_PULLUP);  //must be pressed to recalibrate maxes/mins
   pinMode(13, OUTPUT);                    //used to notify if power goes over limit
-
+  
   //HANDLE ALL TASKS RELATED TO THE FASTLED LIBRARY
   FastLED.addLeds<LED_TYPE, LED_PIN, COLOR_ORDER>(matrixLEDs, NUM_LEDS).setCorrection(TypicalLEDStrip);    //initialize LEDs
   FastLED.setBrightness(MAX_BRIGHTNESS);                                //set maximum brightness for leds, independent of color value
-  FastLED.setMaxRefreshRate(60);                                        //set LED update rate limit to 60 frames per second
+  FastLED.setMaxRefreshRate(120);                                        //set LED update rate limit to 60 frames per second
   set_max_power_in_volts_and_milliamps(psuVoltage, psuAmperage);        //limit the brightness of the LEDs to keep within power spec
   set_max_power_indicator_LED(13);                                      //notify the user if leds draw too much power
   FastLED.clear();                                                      //clear all LED data
@@ -112,10 +112,11 @@ void setup()
   randomSeed(analogRead(A0));
 
   //test all the leds in the chain
-  //TestLEDs();
+  TestLEDs();
 
   int recalibrateTries = 0;
   bool btnDetected = false;
+  bool minsFlag, maxsFlag = false;
   while((recalibrateTries < 3000) && (btnDetected == false))
   {
     recalibrateTries+=1;
@@ -123,9 +124,12 @@ void setup()
     {
         fill_solid(matrixLEDs, NUM_LEDS, CHSV(0, 255, MAX_BRIGHTNESS/2));
         FastLED.show();
-        CoreFunctions.CalibrateMaxes();
-        CoreFunctions.CalibrateMins();
-        fill_solid(matrixLEDs, NUM_LEDS, CHSV(120, 255, MAX_BRIGHTNESS/2));
+        maxsFlag = CoreFunctions.CalibrateMaxes();
+        minsFlag = CoreFunctions.CalibrateMins();
+        if(minsFlag && maxsFlag)
+          fill_solid(matrixLEDs, NUM_LEDS, CHSV(120, 255, MAX_BRIGHTNESS/2));
+        else
+          fill_solid(matrixLEDs, NUM_LEDS, CHSV(30, 255, MAX_BRIGHTNESS/2));
         FastLED.show();
         delay(1000);
         FastLED.clear();
@@ -140,7 +144,7 @@ void setup()
 void loop() 
 {
   CoreFunctions.ReadSensors();
-  
+  //delay(3000);
   if(currentMode == 1)
   {
     JumpHandling();
@@ -159,8 +163,8 @@ void JumpHandling()
 {
   //check all of the sensor spots for a detected jump
   bool jumpFlag = false;
-  int rowCounter = 0;
-  int colCounter = 0;
+  byte rowCounter = 0;
+  byte colCounter = 0;
   byte tempSensorVal = 0;
   byte tempMinVal = 0;
   while(jumpFlag == false && (rowCounter < numOfRows))
@@ -238,12 +242,12 @@ void SetBrightnesses()
       byte brightness = CoreFunctions.GetBrightness(row, col);
       if(isOddRow == true)
       {
-        int ledPosition = ((((row*26)+25)-col));
+        ledPosition = ((((row*26)+25)-col));
         matrixLEDs[ledPosition] = CHSV(globalHue, globalSat, brightness);
       }
       else
       {
-        int ledPosition = ((row*26)+col);
+        ledPosition = ((row*26)+col);
         matrixLEDs[ledPosition] = CHSV(globalHue, globalSat, brightness);
       }
     }

@@ -8,53 +8,54 @@ CalibrationCore::CalibrationCore()
 void CalibrationCore::CalculateSampleDelay(int sampleTime, int numOfSamples)
 {
   //calculate the exact loop delay desired
-  samplingDelay = (((sampleTime * 1000) / 96) / numOfSamples);
+  int tempMath = 0;
+  tempMath = sampleTime * 1000;                       //convert seconds to milliseconds
+  tempMath = tempMath / 96;                           //divide by number of sensors
+  samplingDelay = tempMath / numOfSamples;            //divide total time needed by number of samples
+  //samplingDelay = (uint8_t) (((sampleTime * 1000) / 96) / numOfSamples);
 }
 
-void CalibrationCore::StoreMax(byte maxVal, int row, int col)
+void CalibrationCore::StoreMax(byte maxVal, byte row, byte col)
 {
-  int address = (row*8) + col;
+  //int address = (row*8) + col;
+  int address = row * 8;
+  address = address + col;
+  address = address + MAXS_BASE_ADDR;
+
   EEPROM.update(address, maxVal);
 }
 
-void CalibrationCore::StoreMin(byte minVal, int row, int col)
+void CalibrationCore::StoreMin(byte minVal, byte row, byte col)
 {
-  int address = (row*8) + col + 96;
+  //int address = (row*8) + col + 96;
+  int address = row * 8;
+  address = address + col;
+  address = address + MINS_BASE_ADDR;
+
   EEPROM.update(address, minVal);
 }
 
-int CalibrationCore::GetCalibrationDelay()
+byte CalibrationCore::GetCalibrationDelay()
 {
   return samplingDelay;
 }
 
-byte CalibrationCore::GetMax(int row, int col)
+byte CalibrationCore::GetMax(byte row, byte col)
 {
-  int address = (row*8) + col;
+  //int address = (row*8) + col;
+  int address = row * 8;
+  address = address + col;
+  address = address + MAXS_BASE_ADDR;
   byte maxValue = EEPROM.read(address);
   return maxValue;
 }
 
-byte CalibrationCore::GetMin(int row, int col)
+byte CalibrationCore::GetMin(byte row, byte col)
 {
-  int address = (row*8) + col + 96;
+  //int address = (row*8) + col + 96;
+  int address = row * 8;
+  address = address + col;
+  address = address + MINS_BASE_ADDR;
   byte minValue = EEPROM.read(address);
   return minValue;
 }
-/*
-void CalibrationCore::LoadCalibrationVals()
-{
-  //read from the first 96 spots in the Arduino EEPROM for the
-  //sensor max values
-  int storageCounter = 0;
-  
-  for(int row = 0; row < SENSOR_ROWS; row++)
-  {
-    for(int col = 0; col < SENSOR_COLS; col++)
-    {
-      maxOffsets[row][col] = EEPROM.read(storageCounter);
-      minOffsets[row][col] = EEPROM.read(storageCounter+96);
-      storageCounter++;
-    }
-  }
-}*/

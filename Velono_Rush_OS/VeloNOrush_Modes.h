@@ -22,7 +22,7 @@ class JumpModeCore
         bool GetAnimState();
         byte GetPixel(int row, int col);
     private:
-        int currentFrame;
+        byte currentFrame;
         bool jumpDetected;
         int jumpLocationRow;
         int jumpLocationCol;

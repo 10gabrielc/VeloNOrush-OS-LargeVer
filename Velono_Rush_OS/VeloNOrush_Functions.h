@@ -15,18 +15,17 @@ class VeloNOrushCore:public CalibrationCore
 {
   public:
     VeloNOrushCore(byte a, byte b, byte c, byte d);
-    void ReadSensor(int row, int col);
+    void ReadSensor(byte row, byte col);
     void ReadSensors();
-    byte GetSensorVal(int row, int col);
+    byte GetSensorVal(byte row, byte col);
     void MapSensorsToBrightness(byte maxVal);
-    void SetBrightness(byte val, int row, int col);
-    byte GetBrightness(int row, int col);
+    void SetBrightness(byte val, byte row, byte col);
+    byte GetBrightness(byte row, byte col);
     bool CalibrateMins();
     bool CalibrateMaxes();
   private:
     void SetMUX();
-    void RowCol2Pins(int row, int col);
-    //void GetNextRowCol();
+    void RowCol2Pins(byte row, byte col);
     byte voltageReadings[SENSOR_ROWS][SENSOR_COLS];
     byte ledBrightness[LED_ROWS][LED_COLS];
     byte analogPin;

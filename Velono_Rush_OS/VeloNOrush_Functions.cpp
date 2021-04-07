@@ -27,20 +27,22 @@ VeloNOrushCore::VeloNOrushCore(byte a, byte b, byte c, byte d)
   CalculateSampleDelay(CALIBRATE_TIME, CALIBRATE_SAMPLES);
 }
 
-void VeloNOrushCore::ReadSensor(int row, int col)
+void VeloNOrushCore::ReadSensor(byte row, byte col)
 {
   //variables needed
-  int voltageVal = 0;
+  byte voltageVal = 0;
   RowCol2Pins(row, col);
   SetMUX();
   voltageVal = analogRead(analogPin) / 4;
   delayMicroseconds(100);
-
+  
   byte tempMax = GetMax(row, col);
   byte tempMin = GetMin(row, col);
+  //Serial.println(voltageVal);
+  //Serial.println(tempMin);
   
   if(voltageVal > tempMax)
-      voltageVal = tempMax;
+    voltageVal = tempMax;
   if(voltageVal < tempMin)
     voltageVal = tempMin;
   
@@ -50,16 +52,16 @@ void VeloNOrushCore::ReadSensor(int row, int col)
 void VeloNOrushCore::ReadSensors()
 {
   //for loop for iterating through each of the sensors in the array
-  for(int rowCounter = 0; rowCounter < SENSOR_ROWS; rowCounter++)
+  for(byte rowCounter = 0; rowCounter < SENSOR_ROWS; rowCounter++)
   {
-    for(int colCounter = 0; colCounter < SENSOR_COLS; colCounter++)
+    for(byte colCounter = 0; colCounter < SENSOR_COLS; colCounter++)
     {
       ReadSensor(rowCounter, colCounter);
     }
   }
 }
 
-byte VeloNOrushCore::GetSensorVal(int row, int col)
+byte VeloNOrushCore::GetSensorVal(byte row, byte col)
 {
   return voltageReadings[row][col];
 }
@@ -67,22 +69,22 @@ byte VeloNOrushCore::GetSensorVal(int row, int col)
 void VeloNOrushCore::MapSensorsToBrightness(byte maxVal)
 {
   //clear out the array of all the brightnesses initially
-  for(int ledRow = 0; ledRow < LED_ROWS; ledRow++)
+  for(byte ledRow = 0; ledRow < LED_ROWS; ledRow++)
   {
-    for(int ledCol = 0; ledCol < LED_COLS; ledCol++)
+    for(byte ledCol = 0; ledCol < LED_COLS; ledCol++)
     {
       ledBrightness[ledRow][ledCol] = 0;
     }
   }
 
   //iterate through each row of the stored voltages
-  for(int row = 0; row < SENSOR_ROWS; row++)
+  for(byte row = 0; row < SENSOR_ROWS; row++)
   {
     //create a storage for the current column/led being targeted
     int currentColLED = 0;
     
     //iterate through each column of the stored voltages
-    for(int col = 0; col < SENSOR_COLS; col++)
+    for(byte col = 0; col < SENSOR_COLS; col++)
     {
       byte currentSensorVal = GetSensorVal(row, col);
       byte currentMax = GetMax(row, col);
@@ -269,12 +271,12 @@ void VeloNOrushCore::MapSensorsToBrightness(byte maxVal)
   }
 }
 
-void VeloNOrushCore::SetBrightness(byte val, int row, int col)
+void VeloNOrushCore::SetBrightness(byte val, byte row, byte col)
 {
   ledBrightness[row][col] = val;
 }
 
-byte VeloNOrushCore::GetBrightness(int row, int col)
+byte VeloNOrushCore::GetBrightness(byte row, byte col)
 {
   byte brightness = ledBrightness[row][col];
   return brightness;
@@ -282,46 +284,89 @@ byte VeloNOrushCore::GetBrightness(int row, int col)
 
 bool VeloNOrushCore::CalibrateMins()
 {
-  const byte tempMinVal = 10;
-  
-  for(int rowCounter = 0; rowCounter < SENSOR_ROWS; rowCounter++)
+  Serial.println("Calibrating Mins");
+  const byte errorVal = 0;
+  const byte presetMins[SENSOR_ROWS][SENSOR_COLS] = 
   {
-    for(int colCounter = 0; colCounter < SENSOR_COLS; colCounter++)
+//col: 0  1  2  3  4  5  6  7                    ROW:      
+      {18,20,21,27,30,27,37,32},
+      {42,64,65,60,62,71,72,65},
+      {66,245,70,75,70,94,112,99},
+      {40,56,83,103,120,130,153,132},
+      {45,64,76,60,97,94,95,102},
+      {43,231,84,125,108,115,113,131},
+      {48,83,88,109,142,140,156,130},
+      {83,86,100,123,122,130,160,150},
+      {53,82,74,63,76,78,96,87},
+      {73,80,85,70,70,76,89,79},
+      {57,61,75,110,109,106,110,113},
+      {52,51,60,49,50,52,50,60}
+  };
+  
+  for(byte rowCounter = 0; rowCounter < SENSOR_ROWS; rowCounter++)
+  {
+    for(byte colCounter = 0; colCounter < SENSOR_COLS; colCounter++)
     {
-      StoreMin(tempMinVal, rowCounter, colCounter);
+      byte tempVal = presetMins[rowCounter][colCounter];
+      StoreMin(tempVal, rowCounter, colCounter);
+      //Serial.print(presetMins[rowCounter][colCounter]);
+      //Serial.print("  ");
     }
+    //Serial.println("");
   }
+  Serial.println("End Mins Calibration");
   return true;
 }
 
 bool VeloNOrushCore::CalibrateMaxes()
 {
-  const int thresholdOffset = 10;
-  int sampleDelay = GetCalibrationDelay();
-
+  const int thresholdOffset = 0;
+  byte sampleDelay = GetCalibrationDelay();
+  byte maxVals[SENSOR_ROWS][SENSOR_COLS]
+{
+  {110,170,160,145,185,187,197,196},
+  {123,197,184,184,177,175,209,187},
+  {177,245,180,131,144,184,200,180},
+  {174,219,162,188,199,188,217,221},
+  {149,207,190,208,197,195,199,189},
+  {91,231,190,190,219,205,196,185},
+  {156,202,161,200,210,190,242,161},
+  {204,206,159,200,195,176,232,232},
+  {203,199,135,170,156,167,211,211},
+  {143,196,186,178,170,145,160,172},
+  {183,218,149,193,200,202,230,234},
+  {212,195,204,198,200,230,240,237}
+};
+  //Serial.println(sampleDelay);
+  Serial.println("Calibrating Maxes");
   //for loop for iterating through each of the sensors in the array
-  for(int rowCounter = 0; rowCounter < SENSOR_ROWS; rowCounter++)
+  for(byte rowCounter = 0; rowCounter < SENSOR_ROWS; rowCounter++)
   {
-    for(int colCounter = 0; colCounter < SENSOR_COLS; colCounter++)
+    for(byte colCounter = 0; colCounter < SENSOR_COLS; colCounter++)
     {
-      unsigned long maxSum = 0;
+      /*unsigned long maxSum = 0;
       for(int samples = 0; samples < CALIBRATE_SAMPLES; samples++)
       {
         ReadSensor(rowCounter, colCounter);
-        int tempRead = GetSensorVal(rowCounter, colCounter);
+        volatile byte tempRead = GetSensorVal(rowCounter, colCounter);
         maxSum += tempRead;
         delay(sampleDelay);
       }
 
       //find the average of the sensor value polled
-      byte newMaxVal = ((maxSum / CALIBRATE_SAMPLES) - thresholdOffset);
+      //byte newMaxVal = ((maxSum / CALIBRATE_SAMPLES) - thresholdOffset);
+      byte newMaxVal = maxSum / CALIBRATE_SAMPLES;
+      newMaxVal = maxSum - thresholdOffset;
 
       //call the calibration object to store the data in EEPROM
-      Serial.println(newMaxVal);
+      //Serial.print(newMaxVal);
+      //Serial.print("  ");*/
+      volatile byte newMaxVal = maxVals[rowCounter][colCounter];
       StoreMax(newMaxVal, rowCounter, colCounter);
     }
+    //Serial.println("");
   }
-
+  Serial.println("End max calibration");
   return true;
 }
 
@@ -350,7 +395,7 @@ void VeloNOrushCore::SetMUX()
   digitalWrite(pinD, pinDval);
 }
 
-void VeloNOrushCore::RowCol2Pins(int row, int col)
+void VeloNOrushCore::RowCol2Pins(byte row, byte col)
 {
   //use the equation below to convert the row and column to mux pin and analog pin
   //Each analog pin controls 16 mux pins
@@ -358,39 +403,3 @@ void VeloNOrushCore::RowCol2Pins(int row, int col)
   muxPin = (row % 4) * 4 + (col % 4);
 
 }
-
-/*void VeloNOrushCore::GetNextRowCol()
-{
-  //Handle determining which location to store the sensor's data. Because there are 6 muxes,
-  //with each MUX reading data in squares of 4x4, the data needs to be reorganized and
-  //cannot simply be stored in sequential order. Otherwise reading the data would be confusin
-  //for later algorithms
-  if(storeCount < (96/2))
-  {
-    //reset the column counter after 4 columns, and increment row counter
-    if(col >= 3)
-    {
-      col = 0;
-      row++;
-    }
-    else
-      col++;
-      
-  }
-  //at the middle point, transition to polling the right side of the sensor array
-  else if(storeCount == (96/2))
-  {
-    col = 4;
-    row = 0;
-  }
-  else  //(storageCounter > 48)
-  {
-    if(col >= 7)
-    {
-      col = 4;
-      row++;
-    }
-    else
-      col++;
-  }
-}*/
