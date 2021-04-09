@@ -1,22 +1,26 @@
 #include "VeloNOrush_Functions.h"
 
-/**
- * ~~~~~~~~~~~~~~PUBLIC FUNCTIONS~~~~~~~~~~~~~~~~~~
- */
-
+/*
+    DEFAULT CONSTRUCTOR.
+    INITIALIZES PINS ON THE ARDUINO TO CONTROL THE
+    MULTIPLEXOR AND READ FROM THE ANALOG INPUTS
+*/
 VeloNOrushCore::VeloNOrushCore(byte a, byte b, byte c, byte d)
 {
-  pinA = a;
+  //store passed pins for mux inputs in private memory
+  pinA = a; 
   pinB = b;
   pinC = c;
   pinD = d;
 
+  //initialize MUX pins as inputs
   pinMode(pinA, OUTPUT);
   pinMode(pinB, OUTPUT);
   pinMode(pinC, OUTPUT);
   pinMode(pinD, OUTPUT);
 
-  //enable all analog pins as inputs
+  //enable ALL analog pins as inputs: the large version requires
+  //all analog inputs!
   pinMode(A0, INPUT);
   pinMode(A1, INPUT);
   pinMode(A2, INPUT);
@@ -24,31 +28,48 @@ VeloNOrushCore::VeloNOrushCore(byte a, byte b, byte c, byte d)
   pinMode(A4, INPUT);
   pinMode(A5, INPUT);
 
+  //calculate the sample calibration delay based off default values
   CalculateSampleDelay(CALIBRATE_TIME, CALIBRATE_SAMPLES);
 }
 
+/*
+    FUNCTION TO READ DATA FROM A SPECIFIC SENSOR IN THE SENSOR
+    MATRIX. TARGETS A SPECIFIC SENSOR USING ROW AND COLUMN.
+    STORES THE RESULT IN PRIVATE MEMORY (voltageReadings)
+*/
 void VeloNOrushCore::ReadSensor(byte row, byte col)
 {
-  //variables needed
-  byte voltageVal = 0;
+  //configure pins to select a specific sensor to read
   RowCol2Pins(row, col);
   SetMUX();
-  voltageVal = analogRead(analogPin) / 4;
-  delayMicroseconds(100);
+
+  //get the voltage at the sensor's node. Divide the
+  // result by 4 to truncate the data and fit the result within
+  // a single byte!
+  byte voltageVal = analogRead(analogPin) / 4;
   
-  byte tempMax = GetMax(row, col);
+  //retrieve the min and max values for this sensor from EEPROM
+  byte tempMax = GetMax(row, col);    
   byte tempMin = GetMin(row, col);
-  //Serial.println(voltageVal);
-  //Serial.println(tempMin);
   
+  //adjust current reading to keep value within min and max bounds
   if(voltageVal > tempMax)
     voltageVal = tempMax;
   if(voltageVal < tempMin)
     voltageVal = tempMin;
   
+  //store current sensor reading into private memory
   voltageReadings[row][col] = voltageVal;
+
+  //small delay to allow Arduino ADC to reset
+  delayMicroseconds(100);
 }
 
+/*
+    FUNCTION TO READ ALL SENSORS IN THE SENSOR MATRIX SEQUENTIALLY.
+    UNLESS A SPECIFIC SENSOR'S VALUE IS NEEDED, THIS IS THE
+    SUGGESTED METHOD FOR POLLING ALL SENSORS.
+*/
 void VeloNOrushCore::ReadSensors()
 {
   //for loop for iterating through each of the sensors in the array
@@ -56,16 +77,28 @@ void VeloNOrushCore::ReadSensors()
   {
     for(byte colCounter = 0; colCounter < SENSOR_COLS; colCounter++)
     {
-      ReadSensor(rowCounter, colCounter);
+      //read and store the data of a specific sensor
+      // based off row and column
+      ReadSensor(rowCounter, colCounter); 
     }
   }
 }
 
+/*
+    FUNCTION TO RETURN A SENSOR VALUE FROM MEMORY BASED OFF A ROW AND
+    COLUMN. VALUE RETURED IS A BYTE.
+*/
 byte VeloNOrushCore::GetSensorVal(byte row, byte col)
 {
   return voltageReadings[row][col];
 }
 
+/*
+    FUNCTION TO CONVERT SENSOR READINGS INTO LED BRIGHTNESSES.
+    THE SENSOR ARRAY FOR THE LARGE VERSION IS 12x8, WHILE THE
+    LED ARRAY IS 11x26: A SPECIAL MAPPING ALGORITHM IS THEN
+    REQUIRED TO DISPLAY POSITION ACCURATELY!
+*/
 void VeloNOrushCore::MapSensorsToBrightness(byte maxVal)
 {
   //clear out the array of all the brightnesses initially
@@ -86,6 +119,7 @@ void VeloNOrushCore::MapSensorsToBrightness(byte maxVal)
     //iterate through each column of the stored voltages
     for(byte col = 0; col < SENSOR_COLS; col++)
     {
+      //retrieve a sensor's last reading, min, and max value
       byte currentSensorVal = GetSensorVal(row, col);
       byte currentMax = GetMax(row, col);
       byte currentMin = GetMin(row, col);
@@ -271,113 +305,116 @@ void VeloNOrushCore::MapSensorsToBrightness(byte maxVal)
   }
 }
 
+/*
+    FUNCTION TO STORE A BRIGHTNESS VALUE FOR A SPECIFIC LED BASED
+    OFF A ROW AND COLUMN. ACCEPTS A BYTE AS BRIGHTNESS VALUE.
+*/
 void VeloNOrushCore::SetBrightness(byte val, byte row, byte col)
 {
   ledBrightness[row][col] = val;
 }
 
+/*
+    FUNCTION TO RETRIEVE A BRIGHTNESS FROM MEMORY BASED OFF PASSED
+    ROW AND COLUMN. RETURNS A VALUE FROM 0-255
+*/
 byte VeloNOrushCore::GetBrightness(byte row, byte col)
 {
   byte brightness = ledBrightness[row][col];
   return brightness;
 }
 
+/*
+    FUNCTION TO CALIBRATE THE MINIMUMS OF EACH OF THE SENSORS. DUE TO
+    THE REQUIRED STEPS OF CALIBRATING THESE MINIMUMS, THEY ARE HARD-CODED
+    AND MUST BE MANUALLY CHANGED TO ADJUST THE MAX POSSIBLE PRESSURE. 
+    A MINIMUM VALUE SIGNIFIES THE MINIMUM VOLTAGE READING POSSIBLE, WHICH
+    IN TURN MEANS THE MOST PRESSURE BEING APPLIED TO A SENSOR.
+*/
 bool VeloNOrushCore::CalibrateMins()
 {
-  Serial.println("Calibrating Mins");
-  const byte errorVal = 0;
-  const byte presetMins[SENSOR_ROWS][SENSOR_COLS] = 
+  //because the minimums require each sensor to be stepped on in turn
+  // (and takes a long time due to 96 sensors), these pre-calculated
+  // values are what is used to calibrate the minimum values.
+  const byte minDefaults[SENSOR_ROWS][SENSOR_COLS]
   {
-//col: 0  1  2  3  4  5  6  7                    ROW:      
-      {18,20,21,27,30,27,37,32},
-      {42,64,65,60,62,71,72,65},
-      {66,245,70,75,70,94,112,99},
-      {40,56,83,103,120,130,153,132},
-      {45,64,76,60,97,94,95,102},
-      {43,231,84,125,108,115,113,131},
-      {48,83,88,109,142,140,156,130},
-      {83,86,100,123,122,130,160,150},
-      {53,82,74,63,76,78,96,87},
-      {73,80,85,70,70,76,89,79},
-      {57,61,75,110,109,106,110,113},
-      {52,51,60,49,50,52,50,60}
+    {18,20,21,27,30,27,37,32},
+    {42,64,65,60,62,71,72,65},
+    {66,245,70,75,70,94,112,99},
+    {40,56,83,103,120,130,153,132},
+    {45,64,76,60,97,94,95,102},
+    {43,231,84,125,108,115,113,131},
+    {48,83,88,109,142,140,156,130},
+    {83,86,100,123,122,130,160,150},
+    {53,82,74,63,76,78,96,87},
+    {73,80,85,70,70,76,89,79},
+    {57,61,75,110,109,106,110,113},
+    {52,51,60,49,50,52,50,60}
   };
   
+  //iterate through each sensor and store the value in EEPROM
   for(byte rowCounter = 0; rowCounter < SENSOR_ROWS; rowCounter++)
   {
     for(byte colCounter = 0; colCounter < SENSOR_COLS; colCounter++)
     {
-      byte tempVal = presetMins[rowCounter][colCounter];
+      byte tempVal = minDefaults[rowCounter][colCounter];
       StoreMin(tempVal, rowCounter, colCounter);
-      //Serial.print(presetMins[rowCounter][colCounter]);
-      //Serial.print("  ");
     }
-    //Serial.println("");
   }
-  Serial.println("End Mins Calibration");
+
+  //return a 1 to signify calibration success
   return true;
 }
 
+/*
+    FUNCTION TO CALIBRATE THE MAXIMUMS OF EACH OF THE SENSORS. THIS 
+    MUST BE PERFORMED WHILE THERE IS NO PRESSURE BEING APPLIED TO THE
+    DEVICE. THE SYSTEM TAKES AN AVERAGE OF THE READINGS TO IMPROVE
+    ACCURACY. A MAXIMUM VALUE REPRESENTS THE MAXIMUM A VOLTAGE READING
+    OF A SENSOR CAN BE, WHICH IN TURN RESEMBLES WHEN THERE IS MINIMAL
+    PRESSURE.
+*/
 bool VeloNOrushCore::CalibrateMaxes()
 {
-  const int thresholdOffset = 0;
-  byte sampleDelay = GetCalibrationDelay();
-  byte maxVals[SENSOR_ROWS][SENSOR_COLS]
-{
-  {110,170,160,145,185,187,197,196},
-  {123,197,184,184,177,175,209,187},
-  {177,245,180,131,144,184,200,180},
-  {174,219,162,188,199,188,217,221},
-  {149,207,190,208,197,195,199,189},
-  {91,231,190,190,219,205,196,185},
-  {156,202,161,200,210,190,242,161},
-  {204,206,159,200,195,176,232,232},
-  {203,199,135,170,156,167,211,211},
-  {143,196,186,178,170,145,160,172},
-  {183,218,149,193,200,202,230,234},
-  {212,195,204,198,200,230,240,237}
-};
-  //Serial.println(sampleDelay);
-  Serial.println("Calibrating Maxes");
+  const int thresholdOffset = 0;                //offset to help keep LEDs off when there is no pressure
+  byte sampleDelay = GetCalibrationDelay();     //retrieve the calibration delay time between loops
+
   //for loop for iterating through each of the sensors in the array
   for(byte rowCounter = 0; rowCounter < SENSOR_ROWS; rowCounter++)
   {
     for(byte colCounter = 0; colCounter < SENSOR_COLS; colCounter++)
     {
-      /*unsigned long maxSum = 0;
+      //storage for sums needed when averaging
+      unsigned long maxSum = 0;                 
+
+      //sample a sensor a specific number of times
       for(int samples = 0; samples < CALIBRATE_SAMPLES; samples++)
       {
-        ReadSensor(rowCounter, colCounter);
-        volatile byte tempRead = GetSensorVal(rowCounter, colCounter);
-        maxSum += tempRead;
-        delay(sampleDelay);
+        ReadSensor(rowCounter, colCounter);                             //retrieve specific sensor reading
+        volatile byte tempRead = GetSensorVal(rowCounter, colCounter);  //store reading
+        maxSum += tempRead;                                             //add to continuous sum
+        delay(sampleDelay);                                             //wait calculated amount of time
       }
 
       //find the average of the sensor value polled
-      //byte newMaxVal = ((maxSum / CALIBRATE_SAMPLES) - thresholdOffset);
-      byte newMaxVal = maxSum / CALIBRATE_SAMPLES;
-      newMaxVal = maxSum - thresholdOffset;
+      byte newMaxVal = maxSum / CALIBRATE_SAMPLES;      //find the average through division
+      newMaxVal = maxSum - thresholdOffset;             //adjust based off desired offset
 
       //call the calibration object to store the data in EEPROM
-      //Serial.print(newMaxVal);
-      //Serial.print("  ");*/
-      volatile byte newMaxVal = maxVals[rowCounter][colCounter];
       StoreMax(newMaxVal, rowCounter, colCounter);
     }
-    //Serial.println("");
   }
-  Serial.println("End max calibration");
   return true;
 }
 
 /*
- * ~~~~~~~~~~~~~~~~~~~~~~~~~~PRIVATE FUNCTIONS~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
- */
-
+    FUNCTION TO SET THE SELECTION PINS (A,B,C,D) ON ALL MULTIPLEXERS
+    USES MUX PIN SELECTION BETWEEN 0 AND 15 TO TOGGLE SELECTION PINS
+*/
 void VeloNOrushCore::SetMUX()
 {
   bool pinAval, pinBval, pinCval, pinDval = 0;    //bit storage of each input pin
-  int readPin = muxPin;                        //storage of pin number to work with
+  int readPin = muxPin;                           //storage of pin number to work with
 
   //convert the decimal pin number to binary
   pinAval = readPin % 2;
@@ -395,11 +432,14 @@ void VeloNOrushCore::SetMUX()
   digitalWrite(pinD, pinDval);
 }
 
+/*    
+    FUNCTION TO CALCULATE WHICH MUX CHIP TO READ FROM, AND WHICH PIN
+    ON THE MUX CHIP TO ENABLE. REQUIRES A ROW AND COLUMN.
+*/
 void VeloNOrushCore::RowCol2Pins(byte row, byte col)
 {
-  //use the equation below to convert the row and column to mux pin and analog pin
-  //Each analog pin controls 16 mux pins
+  //use the equation below to convert the row and column to mux pin and analog pin.
+  //Each analog pin is linked to 16 mux pins essentially.
   analogPin = 14 + (row / 4) + (col / 4 * 3);
   muxPin = (row % 4) * 4 + (col % 4);
-
 }
