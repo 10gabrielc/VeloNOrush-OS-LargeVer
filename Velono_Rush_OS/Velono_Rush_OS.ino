@@ -26,11 +26,12 @@ const byte muxPinC = 9;
 const byte muxPinD = 10;
 
 //Pins for button interactions
-const byte recalibratePin = 4;
+const byte recalibratePin = 2;        //button that activates the recalibration system
+const byte modeSwitchPin = 3;         //switch that changes system between tracking mode and jump mode 
 
 //specifications of power supply used
 const byte psuVoltage = 5;            //supply value in volts
-const uint32_t psuAmperage = 2000;    //supply value in milliamps
+const uint32_t psuAmperage = 4500;    //supply value in milliamps
 
 //constants to describe sensor matrix
 const int numOfSensors = 96;
@@ -40,7 +41,7 @@ const int numOfRowsLED = 11;
 const int numOfColsLED = 26;
 
 //variables used for different operation modes
-const byte currentMode = 0;           //0 is position/weight tracking, 1 is jump
+bool currentMode = 0;                 //0 is position/weight tracking, 1 is jump
 
 //loop variables
 const int loopDelay = 8;              //125hz refresh rate
@@ -79,7 +80,7 @@ void TestLEDs()
   {
     matrixLEDs[i] = CHSV(globalHue, globalSat, globalVal/2);  //set to global hue, staturation and value
     FastLED.show();                                           //update each loop
-    delay(5);                                                 //5ms delay between each light
+    delay(2);                                                 //2ms delay between each light
   }
 
   //wait 1 second and blank the LED matrix
@@ -95,17 +96,22 @@ void TestLEDs()
 */
 void CheckForCalibration()
 {
-  int recalibrateTries = 0;           //storage for number of tries to recalibrate
+  volatile int recalibrateTries = 0;           //storage for number of tries to recalibrate
   bool btnDetected = false;           //flag for if the recalibrate button is pressed
   bool minsFlag, maxsFlag = false;    //flags for if the min and max calibrations occured successfully
-  const int maxTries = 3000;
+  const int maxTries = 3000;          //maximum number of checks before moving on
 
+  //set the system to default calibration status
+  CoreFunctions.DefaultCalibration();
+  
   //continuously check for a recalibrate button press, or move on after a number of tries
+  digitalWrite(13, HIGH);
   while((recalibrateTries < maxTries) && (btnDetected == false))
   {
     //check if the recalibrate button has been pressed. Button is in pull-up mode
     if(digitalRead(recalibratePin) == LOW)
     {
+      //Serial.println("Second");
         //indicate calibration is happening by setting LEDs to red
         fill_solid(matrixLEDs, NUM_LEDS, CHSV(0, 255, MAX_BRIGHTNESS/2));
         FastLED.show();
@@ -132,6 +138,7 @@ void CheckForCalibration()
     recalibrateTries+=1;    //increment loop counter
     delay(1);               //wait 1 millisecond
   }
+  digitalWrite(13, LOW);
 }
 
 /*
@@ -150,18 +157,12 @@ void JumpHandling()
   //final sensor has not been reached
   while(jumpFlag == false && (rowCounter < numOfRows))
   {
-    //tempSensorVal = CoreFunctions.GetSensorVal(rowCounter, colCounter);
-    //tempMinVal = CoreFunctions.GetMin(rowCounter, colCounter);
-    //jumpFlag = JumpFunctions.JumpCheck(tempSensorVal, tempMinVal, rowCounter, colCounter);
+    //check a sensor's value and minimum value
+    tempSensorVal = CoreFunctions.GetSensorVal(rowCounter, colCounter);
+    tempMinVal = CoreFunctions.GetMin(rowCounter, colCounter);
 
-    /*TEMPORARY FORCING OF DETECTION FOR TESTING*/
-    byte randCol = (uint8_t) random(numOfCols);
-    byte randRow = (uint8_t) random(numOfRows);
-
-    //based off current sensor values, check if a jump has occured at a specific row and column
-    jumpFlag = JumpFunctions.JumpCheck(10, 10, randRow, randCol);
-    //Serial.print("Jumpflag: ");
-    //Serial.println(jumpFlag);
+    //use a function within the jump mode class to check if a jump occured
+    jumpFlag = JumpFunctions.JumpCheck(tempSensorVal, tempMinVal, rowCounter, colCounter);
 
     //increment row and column counters based on their status
     if(colCounter == numOfCols-1)
@@ -175,7 +176,7 @@ void JumpHandling()
     }
   }
 
-  //HANDLE WHEN A JUMP IS DETECTED!
+  //handle if a jump is detected
   if(jumpFlag == true)
   {
     //continue the animation until it is finished
@@ -209,8 +210,6 @@ void JumpHandling()
       jumpFlag = JumpFunctions.GetAnimState();
     }
   }
-  
-  delay(100);
 }
 
 /*
@@ -275,12 +274,12 @@ void setup()
 {
   //Initialize required pins
   pinMode(recalibratePin, INPUT_PULLUP);  //must be pressed to recalibrate maxes/mins during setup
+  pinMode(modeSwitchPin, INPUT_PULLUP);   //allows switch for either tracking or jump mode
   pinMode(13, OUTPUT);                    //used to notify if power goes over limit
   
   //HANDLE ALL TASKS RELATED TO THE FASTLED LIBRARY
-  FastLED.addLeds<LED_TYPE, LED_PIN, COLOR_ORDER>(matrixLEDs, NUM_LEDS).setCorrection(TypicalLEDStrip);    //initialize LEDs
+  FastLED.addLeds<LED_TYPE, LED_PIN, COLOR_ORDER>(matrixLEDs, NUM_LEDS);//initialize LEDs
   FastLED.setBrightness(MAX_BRIGHTNESS);                                //set maximum brightness for leds, independent of color value
-  FastLED.setMaxRefreshRate(120);                                       //set LED update rate limit to 120 frames per second
   set_max_power_in_volts_and_milliamps(psuVoltage, psuAmperage);        //limit the brightness of the LEDs to keep within power spec
   set_max_power_indicator_LED(13);                                      //notify the user if leds draw too much power
   FastLED.clear();                                                      //clear all LED data
@@ -295,8 +294,10 @@ void setup()
   //test all the leds in the chain
   TestLEDs();
 
+  //check for if calibration is requested from the user
   CheckForCalibration();
-  
+
+  //pause to prevent insanity in case of system error
   delay(1000);
 }
 
@@ -306,18 +307,30 @@ void setup()
 */
 void loop() 
 {
+  //check all sensors on the sensor matrix using the VeloNOrush core class
   CoreFunctions.ReadSensors();
-  //delay(3000);
+
+  //check which mode the system should be in
+  currentMode = digitalRead(modeSwitchPin);
+
+  //perform mode specific functions based off current mode
   if(currentMode == 1)
   {
+    //perform steps to check for jumps
     JumpHandling();
   }
   else
   {
+    //map positional tracking data to LEDs
     CoreFunctions.MapSensorsToBrightness(globalVal);
-    //Lastly, we set the LED brightnesses
+    
+    //translate brightness array data to sequential LED strand lighting
     SetBrightnesses();
   }
+
+  //shift the hue for LEDs over time, to create a rainbow effect
   globalHue+=5;
+
+  //system repeat limit
   delay(loopDelay);
 }

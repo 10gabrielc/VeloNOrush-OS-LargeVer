@@ -24,7 +24,7 @@ byte muxPin = 0;
 byte analogPin = 0;
 
 //storage of maxes
-byte maxVals[numOfRows][numOfCols];
+byte minVals[numOfRows][numOfCols];
 
 //Function to blink the onboard LED of the UNO over 1 second
 void BlinkLEDs(int blinkCount, int blinkTime)
@@ -80,13 +80,21 @@ void setup()
   pinMode(btnAdvancePin, INPUT_PULLUP);
 
   Serial.begin(9600);
+
+  for(int row = 0; row < numOfRows; row++)
+  {
+    for(int col = 0; col < numOfCols; col++)
+    {
+      minVals[row][col] = 255;
+    }
+  }
 }
 
 void loop() 
 {
   
   // put your main code here, to run repeatedly:
-  for(byte row = 6; row < numOfRows; row++)
+  for(byte row = 0; row < numOfRows; row++)
   {
     for(byte col = 0; col < numOfCols; col++)
     {
@@ -100,10 +108,30 @@ void loop()
         Serial.print(col);
         Serial.print(" | ");
         Serial.println(voltStorage);
+
+        byte lastValue = minVals[row][col];
+        if(voltStorage < lastValue)
+          minVals[row][col] = voltStorage;
         delay(loopDelay);
       }
-      maxVals[row][col] = voltStorage;
+      Serial.print(minVals[row][col]);
+      Serial.println(" stored.");
       BlinkLEDs(10, 1);
     }
+  }
+  while(true)
+  {
+    Serial.println("---------------------------------------");
+    for (int row = 0; row < numOfRows; row++)
+    {
+      for (int col = 0; col < numOfCols; col++)
+      {
+        Serial.print(minVals[row][col]);
+        Serial.print("  ");
+      }
+      Serial.println(" ");
+    }
+    Serial.println("-----------------------------------------");
+    BlinkLEDs(2, 1);
   }
 }

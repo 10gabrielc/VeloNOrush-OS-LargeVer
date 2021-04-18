@@ -5,8 +5,6 @@
 #define SENSOR_COLS 8           //number of cols in sensor matrix
 #define LED_ROWS 11             //number of rows in LED matrix
 #define LED_COLS 26             //number of cols in LED matrix
-#define MINS_OFFSET 0
-#define MAXS_OFFSET 0
 #define PIXEL_ON 1              //code for a pixel to be turned on
 #define PIXEL_OFF 2             //code for a pixel to be turned off
 #define PIXEL_IGNORE 0          //code for a pixel to be ignored

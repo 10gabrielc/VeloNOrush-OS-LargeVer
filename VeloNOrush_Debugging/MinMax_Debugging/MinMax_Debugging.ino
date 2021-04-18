@@ -20,7 +20,7 @@ const byte numOfRows = 12;
 const byte numOfCols = 8;
 
 //loop variables
-const int loopDelay = 250;
+const int loopDelay = 3000;
 
 //constants throughout the code
 const byte adcDelay = 100;
@@ -491,14 +491,14 @@ void loop()
       RowCol2Pins(row, col);
       SetMUX();
       currentVolt = (byte) (analogRead(analogPin) / 4);
-      currentMax = maxVals[row][col];
+      /*currentMax = maxVals[row][col];
       currentMin = minVals[row][col];
       if (currentVolt > currentMax)
         currentVolt = currentMax;
       if (currentVolt < currentMin)
         currentVolt = currentMin;
-      currentVal = map(currentVolt, currentMax, currentMin, 0, 100);
-      Serial.print(currentVal);
+      currentVal = map(currentVolt, currentMax, currentMin, 0, 100);*/
+      Serial.print(currentVolt);
       Serial.print("  ");
     }
     Serial.println(" ");

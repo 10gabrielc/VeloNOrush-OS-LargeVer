@@ -10,7 +10,7 @@ JumpModeCore::JumpModeCore()
 
 bool JumpModeCore::JumpCheck(byte sensorVal, byte sensorMin, int row, int col)
 {
-    byte jumpOffset = sensorMin + MINS_OFFSET;
+    byte jumpOffset = sensorMin + 17;
 
     if(sensorVal <= jumpOffset)
     {

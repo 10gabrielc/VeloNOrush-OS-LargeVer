@@ -1,4 +1,4 @@
-#include "calibration.h"
+#include "VeloNOrush_Calibration.h"
 #include <EEPROM.h>
 
 // DEFAULT CONSTRUCTOR
@@ -32,7 +32,13 @@ void CalibrationCore::StoreMax(byte maxVal, byte row, byte col)
   address = address + col;              //adjust based off column
   address = address + MAXS_BASE_ADDR;   //adjust based off base EEPROM address for max values
 
-  EEPROM.update(address, maxVal);       //store max value in EEPROM
+  byte shiftedMaxVal = 0;
+  if(maxVal < MAXS_OFFSET)                  //verify that there will not be unsigned byte rollover
+    shiftedMaxVal = 0;                      // when the max stored is adjusted
+  else
+    shiftedMaxVal = maxVal - MAXS_OFFSET;
+
+  EEPROM.update(address, shiftedMaxVal);       //store max value in EEPROM
 }
 
 /*
@@ -47,7 +53,13 @@ void CalibrationCore::StoreMin(byte minVal, byte row, byte col)
   address = address + col;              //adjust based off column
   address = address + MINS_BASE_ADDR;   //adjust based off base EEPROM address for min values
 
-  EEPROM.update(address, minVal);       //store min value in EEPROM
+  byte shiftedMinVal = 0;
+  if(minVal < MINS_OFFSET)
+    shiftedMinVal = 0;
+  else
+    shiftedMinVal = minVal - MINS_OFFSET;
+
+  EEPROM.update(address, shiftedMinVal);       //store min value in EEPROM
 }
 
 /*
@@ -101,34 +113,34 @@ void CalibrationCore::DefaultCalibration()
   //Default minimum values recorded manually stored in program data
   const byte minDefaults[SENSOR_ROWS][SENSOR_COLS]
   {
-    {18,20,21,27,30,27,37,32},
-    {42,64,65,60,62,71,72,65},
-    {66,245,70,75,70,94,112,99},
-    {40,56,83,103,120,130,153,132},
-    {45,64,76,60,97,94,95,102},
-    {43,231,84,125,108,115,113,131},
-    {48,83,88,109,142,140,156,130},
-    {83,86,100,123,122,130,160,150},
-    {53,82,74,63,76,78,96,87},
-    {73,80,85,70,70,76,89,79},
-    {57,61,75,110,109,106,110,113},
-    {52,51,60,49,50,52,50,60}
+    {4,7,8,6,5,6,5,5},
+    {16,14,14,13,11,11,8,6},
+    {19,27,20,31,20,11,6,5},
+    {31,43,49,34,25,13,7,6},
+    {18,27,35,36,30,15,6,5},
+    {20,32,33,44,37,30,7,6},
+    {19,23,29,25,24,8,5,6},
+    {17,14,40,40,30,20,14,6},
+    {14,14,17,19,19,16,6,6},
+    {17,16,16,17,14,19,10,6},
+    {17,15,17,16,15,11,7,7},
+    {12,11,6,12,20,11,11,8}
   };
   //Default maximum values recorded manually stored in program data
   const byte maxDefaults[SENSOR_ROWS][SENSOR_COLS]
   {
-    {110,170,160,145,185,187,197,196},
-    {123,197,184,184,177,175,209,187},
-    {177,245,180,131,144,184,200,180},
-    {174,219,162,188,199,188,217,221},
-    {149,207,190,208,197,195,199,189},
-    {91,231,190,190,219,205,196,185},
-    {156,202,161,200,210,190,242,161},
-    {204,206,159,200,195,176,232,232},
-    {203,199,135,170,156,167,211,211},
-    {143,196,186,178,170,145,160,172},
-    {183,218,149,193,200,202,230,234},
-    {212,195,204,198,200,230,240,237}
+    {108,115,130,110,150,130,160,125},
+    {93,130,127,134,136,132,156,90},
+    {140,147,149,105,126,129,145,125},
+    {172,180,115,138,147,124,167,162},
+    {125,150,133,158,159,156,175,164},
+    {83,145,146,170,207,159,149,150},
+    {109,151,130,123,138,94,161,115},
+    {140,148,120,140,137,125,150,117},
+    {135,144,86,113,108,121,145,163},
+    {115,134,118,108,105,98,194,150},
+    {161,168,119,127,125,143,162,170},
+    {188,155,176,148,185,210,207,179}
   };
 
   //store all preset maxes and mins into EEPROM

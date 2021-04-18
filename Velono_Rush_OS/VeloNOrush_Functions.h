@@ -5,11 +5,11 @@
 #define SENSOR_COLS 8             //number of columns in sensor matrix
 #define LED_ROWS 11               //number of rows in LED matrix
 #define LED_COLS 26               //number of columns in LED matrix
-#define CALIBRATE_TIME 7          //default time in seconds for calibration
-#define CALIBRATE_SAMPLES 20      //default number of samples per sensor
+#define CALIBRATE_TIME 5          //default time in seconds for calibration
+#define CALIBRATE_SAMPLES 3       //default number of samples per sensor
 
 #include "Arduino.h"
-#include "calibration.h"
+#include "VeloNOrush_Calibration.h"
 
 class VeloNOrushCore:public CalibrationCore
 {
